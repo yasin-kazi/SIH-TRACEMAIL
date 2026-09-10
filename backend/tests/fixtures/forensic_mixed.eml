@@ -1,0 +1,36 @@
+Return-Path: <billing@evil-quest.example.net>
+Received: from phishing-sender.evil-quest.example.net (host-192-0-2-7.evil-quest.example.net [192.0.2.7]) by mail-1.corp-example.test with SMTP id A1B2C3; Fri, 12 Mar 2021 10:45:12 +0000
+Received: from mx-outbound.example.com (mx-192-0-2-8.example.com [192.0.2.8]) by edge-relay-1.corp-example.test with ESMTPS id Z9Y8X7; Fri, 12 Mar 2021 10:44:58 +0000
+From: "Billing Office" <billing@evil-quest.example.net>
+To: analyst@corp-example.test
+Reply-To: refund@paid-login.example.net
+Subject: Overdue settlement notice
+Date: Fri, 12 Mar 2021 10:45:00 +0000
+Message-ID: <forensic-fixture-002@evil-quest.example.net>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="forensic-boundary-002"
+Authentication-Results: mail-1.corp-example.test; spf=fail smtp.mailfrom=evil-quest.example.net; dkim=fail header.d=evil-quest.example.net; dmarc=fail header.from=evil-quest.example.net
+
+--forensic-boundary-002
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+UGxlYXNlIHJldmlldyB0aGUgYXR0YWNoZWQgc2V0dGxlbWVudCBkb2N1bWVudCBhbmQgbGVkZ2VyLgpWaXNpdCBodHRwOi8vZXZpbC1xdWVzdC5leGFtcGxlLm5ldC9wYXkgYmVmb3JlIEZyaWRheS4KQ29udGFjdCByZWZ1bmRAcGFpZC1sb2dpbi5leGFtcGxlLm5ldCBmb3IgcXVlc3Rpb25zLg==
+--forensic-boundary-002
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+<p>Settlement overdue. <a href=3D"http://evil-quest.example.net/pay">Pay now</a>.</p>
+--forensic-boundary-002
+Content-Type: application/pdf; name="invoice.pdf"
+Content-Disposition: attachment; filename="invoice.pdf"
+Content-Transfer-Encoding: base64
+
+SGVsbG8gUERGIGZpeHR1cmUgMDAxIC0gZmFrZSBpbnZvaWNlIGNvbnRlbnRzIGZvciBUcmFjZU1haWwgZm9yZW5zaWMgdGVzdC4=
+--forensic-boundary-002
+Content-Type: text/csv; name="ledger.csv"
+Content-Disposition: attachment; filename="ledger.csv"
+Content-Transfer-Encoding: base64
+
+bGVkZ2VyLGFtb3VudApBQ01FLDk5OS45OQo=
+--forensic-boundary-002--

@@ -1,0 +1,36 @@
+# Secrets and credentials — never commit
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Databases and generated data
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+tracemail.db
+
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Node / build artifacts
+node_modules/
+dist/
+dist-ssr/
+build/
+*.local
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+
+# Separate exported project with its own git repository and remote
+# (stitch design-tool export). Do not track as a submodule/gitlink here.
+stitch_tracemail_ai_investigation_workstation/
