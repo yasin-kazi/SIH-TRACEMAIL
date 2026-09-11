@@ -18,15 +18,38 @@ read-only, case-scoped **evidence query layer** (`backend/services/
 evidence_queries.py`) and never invent forensic facts. See "MILESTONE 3
 SHIPPED" below.
 
-## PHASE 3 — Gmail acquisition: ARCHITECTURE AUDIT COMPLETE (design only)
+## PHASE 3 — Gmail acquisition: IMPLEMENTED (backend + frontend), live-account check pending
 
-The pre-implementation architecture and security audit for the first direct
-mailbox source (Gmail OAuth + raw-message acquisition) is complete. The design
-baseline is `docs/GMAIL_ACQUISITION_DESIGN.md`. **No application code, models,
-OAuth flow, or credentials were created.** Implementation, when approved,
-starts from that document's "Minimum implementation plan" (§12) and adds
-`GmailSource` as a new `EmailSource` adapter against the unchanged forensic
-pipeline.
+The backend (OAuth + PKCE, encrypted token store, `GmailSource` adapter, picker
+and analyze endpoints), and the `tracemail-app` frontend (connect → pick →
+analyze) are implemented. The design baseline is
+`docs/GMAIL_ACQUISITION_DESIGN.md` (status updated to IMPLEMENTED).
+**Verification:** `cd backend; python -m unittest discover -v` → 30/30 OK
+(24 Gmail tests incl. new explicit PKCE test); `cd tracemail-app; npm run build`
+and `npm run lint` pass.
+
+SHIPPED IN THIS PHASE:
+- `backend/routers/gmail.py` + `backend/services/gmail/`:
+  `client.py`, `oauth.py`, `config.py`, `errors.py`, `token_store.py`,
+  `acquisition.py` (full inventory in `TEAM_HANDOFF.md` §9).
+- OAuth 2.0 Authorization Code + PKCE S256, least-privilege `gmail.readonly` scope.
+- Token store AES-encrypted at rest; nothing sensitive ever in a response/redirect/log.
+- Picker: `GET /api/gmail/search`, `GET /api/gmail/messages/{id}/metadata`,
+  `POST /api/gmail/analyze` (raw preserved as `message/rfc822`, SHA-256 + pre-parse checks,
+  duplicate `409`, size cap, full failure matrix).
+- Prove parity: `test_pipeline_parity_with_eml_fixture` shows gmail- and
+  EML-derived cases share one forensic pipeline (same MIME parts, hops,
+  attachment hashes, IOCs via the same read APIs).
+- Frontend: `src/api/gmail.ts`, `src/components/GmailPane.tsx`,
+  `src/pages/ConnectStatus.tsx` (`/investigation?connect=…`), `src/App.tsx` route,
+  `CasesPage.tsx` New Investigation dialog toggle.
+
+REMAINING:
+- **Live-account verification** — needs a configured Google Cloud OAuth app
+  (`TRACEMAIL_GMAIL_CLIENT_ID/SECRET/REDIRECT_URI`) to prove the real consent
+  and token exchange; all non-live behavior is covered by the fake-client tests.
+- Stable non-WIP commit of the Phase 3 completion work on `main` (the local
+  `main` and `origin/phase-3-gmail-wip` are both at `8068e41`), then a plain push.
 
 ## ARCHITECTURE
 

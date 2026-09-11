@@ -1,10 +1,10 @@
-# TraceMail API Contract (Phase 1 baseline + Phase 2 forensic records)
+# TraceMail API Contract (Phase 1 baseline + Phase 2 forensic records + Phase 3 Gmail)
 
 Base URL defaults to `http://localhost:8000` (the frontend reads `VITE_API_BASE_URL` when set). All responses are JSON except multipart upload requests. Error responses use FastAPI's `{ "detail": "..." }` shape.
 
 ## Email source acquisition
 
-Uploads are captured through an `EmailSource` abstraction. The pipeline only ever consumes a normalized `AcquiredEmail` (`source_type`, `source_identifier`, `original_filename`, `content_type`, `raw_bytes`, `acquisition_method`, `metadata`) and never inspects the transport it arrived on. The only functional adapter today is `EMLSource` (`source_type: "eml_upload"`, `acquisition_method: "upload"`); Gmail/Microsoft 365 adapters are future work. The `source_type` value is stable in `UploadResponse`, `Case`, `SourceRecord`, and `EvidenceRecord`.
+Uploads are captured through an `EmailSource` abstraction. The pipeline only ever consumes a normalized `AcquiredEmail` (`source_type`, `source_identifier`, `original_filename`, `content_type`, `raw_bytes`, `acquisition_method`, `metadata`) and never inspects the transport it arrived on. Two functional adapters exist: `EMLSource` (`source_type: "eml_upload"`, `acquisition_method: "upload"`) and `GmailSource` (`source_type: "gmail"`, `acquisition_method: "gmail_oauth"`, `content_type: "message/rfc822"`, `original_filename: ""`). Microsoft 365 is future work. The `source_type` value is stable in `UploadResponse`, `Case`, `SourceRecord`, `EvidenceRecord`, and the forensic read APIs. For a Gmail case, `source_identifier` is the provider message id — provenance of the message, not proof of sender authenticity.
 
 ## Cases
 
@@ -44,6 +44,22 @@ All are read-only, query the **latest** preserved evidence record for the case, 
 - `GET /api/cases/{case_id}/iocs` — observable indicators: `{ id, type, value, source }` where `type` is ip / domain / url / email / message_id / hash. An IOC is an observable; the response carries no verdict (no `malicious` field).
 - `GET /api/cases/{case_id}/relationships` — consists-of links: `{ id, relation_type, source_type, source_id, target_type, target_id }`, where `source_type` is the evidence record's `evidence_type` and `source_id` its id.
 - `GET /api/cases/{case_id}/forensic-summary` — original evidence provenance plus counts from persisted records: `{ case_id, evidence_id, source_type, source_identifier, acquisition_method, acquisition_timestamp, content_type, original_filename, size, sha256, mime_parts, received_hops, attachments, iocs }`. Counts are always derived from persisted rows, never client-side.
+
+## Gmail acquisition (Phase 3)
+
+Connection and picker are served by `GET /api/gmail/*`; selected-message analysis reuses `POST /api/gmail/analyze`. The OAuth client secret and tokens are server-side only (tokens encrypted at rest as `v1:` AES-256-GCM blobs); no code, token, or secret ever appears in a response or a redirect URL. The auth URL carries only the public `client_id`, the least-privilege `gmail.readonly` scope, an expiring single-use `state`, and a PKCE `code_challenge`.
+
+| Endpoint | Request | Success response | Errors | Notes |
+| --- | --- | --- | --- | --- |
+| `GET /api/gmail/status` | none | `{ connected, source, status, account }` | none | `status` = missing/valid/expired/revoked; `account` = connected authorized email or null |
+| `GET /api/gmail/auth/start` | none | `{ auth_url }` | 503 unconfigured (`TRACEMAIL_GMAIL_CLIENT_ID`/`SECRET` missing) | Auth URL includes `gmail.readonly` scope, `state`, `code_challenge`, `code_challenge_method=S256`, `access_type=offline` |
+| `GET /api/gmail/oauth/callback` | query `code`, `state`, optional `error` | `303` to `{frontend_origin}/investigation?connect=success|denied|invalid|expired|error` | state tampered/reused/expired → `?connect=invalid|expired`; no exchange | Server-side code exchange; persists encrypted tokens |
+| `POST /api/gmail/revoke` | none | `{ status: "disconnected" }` | none | Best-effort Google revoke + delete all `gmail_connections` rows |
+| `GET /api/gmail/search` | `q` (Gmail query syntax), `page_token`, `max_results` (≤50, default 10) | `{ messages: GmailMessageOut[] , next_page_token, result_size_estimate }` | 401 not connected/refresh failed, 429 rate limit, 502 provider error | Metadata rows only (id, threadId, snippet, From/Subject/Date, sizeEstimate); never bodies |
+| `GET /api/gmail/messages/{message_id}/metadata` | path ID | `GmailMessageOut` | 404 not found | `format=metadata`; no raw/body/payload fields |
+| `POST /api/gmail/analyze` | `{ "message_id": string }` | `UploadResponse` (`source_type: "gmail"`, `analysis_status: "completed"`) | 400 invalid, 401 reconnect required, 403 permission, 404 message no longer available, 409 already analyzed as case X, 413 oversized (≥25 MB default cap), 422 malformed base64/unparsable, 429 rate limit, 502 provider/server/network | Fetches `format=raw` only, strict base64url decode, SHA-256 pre-parse, exact bytes → `EvidenceRecord`, then the existing `ingest_acquired_email()` pipeline |
+
+`GmailMessageOut` fields: `{ id, thread_id, snippet, from_address, subject, date, internal_date_ms, size_estimate }`. `POST /api/gmail/analyze` returns the standard `UploadResponse` shape through the server-side duplicate check (`409` keyed on `SourceRecord(source_type="gmail", source_id=message_id)`).
 
 ## Reports
 

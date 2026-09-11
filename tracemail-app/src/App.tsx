@@ -11,12 +11,14 @@ import TimelinePage from './pages/TimelinePage';
 import CopilotPage from './pages/CopilotPage';
 import ReportPage from './pages/ReportPage';
 import AnalysisProgress from './pages/AnalysisProgress';
+import ConnectStatus from './pages/ConnectStatus';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<CasesPage />} />
+          <Route path="/investigation" element={<ConnectStatus />} />
           <Route path="/case/:caseId" element={<Layout />}>
           <Route index element={<Navigate to="overview" replace />} />
           <Route path="overview" element={<OverviewPage />} />

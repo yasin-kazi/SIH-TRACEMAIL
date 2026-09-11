@@ -256,4 +256,28 @@ export interface ReportData {
   generatedAt: string;
 }
 
+export interface GmailStatus {
+  connected: boolean;
+  source: string;
+  status: 'missing' | 'valid' | 'expired' | 'revoked';
+  account: string | null;
+}
+
+export interface GmailMessageRow {
+  id: string;
+  threadId: string;
+  snippet: string;
+  fromAddress: string;
+  subject: string;
+  date: string;
+  internalDateMs: number | null;
+  sizeEstimate: number | null;
+}
+
+export interface GmailSearchResult {
+  messages: GmailMessageRow[];
+  nextPageToken: string | null;
+  resultSizeEstimate: number;
+}
+
 export type NavPath = 'overview' | 'identity' | 'evidence' | 'infrastructure' | 'graph' | 'campaign' | 'timeline' | 'copilot' | 'report';

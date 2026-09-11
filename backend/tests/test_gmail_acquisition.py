@@ -271,7 +271,7 @@ class GmailAcquisitionTest(unittest.TestCase):
 
         summary = self.client.get(f"/api/cases/{case_id}/forensic-summary").json()
         self.assertEqual(summary["source_type"], "gmail")
-        self.assertEqual(summary["source_identifier"], "msg-parity")
+        self.assertEqual(summary["source_identifier"], "msg-success")
         self.assertEqual(summary["acquisition_method"], "gmail_oauth")
         self.assertEqual(summary["sha256"], hashlib.sha256(self.parity_raw).hexdigest())
         self.assertEqual(summary["size"], len(self.parity_raw))
@@ -457,6 +457,48 @@ class GmailAcquisitionTest(unittest.TestCase):
         clock["now"] = 1000.0 + 601.0
         with self.assertRaises(GmailStateExpiredError):
             store2.consume(s3)                                    # J expired
+
+    def test_pkce_url_and_verifier_reach_exchange(self):
+        import asyncio
+        from urllib.parse import parse_qs, urlparse
+
+        from services.gmail.acquisition import build_gmail_service
+        from services.gmail.oauth import GoogleOAuthProvider, OAuthStateStore, _code_challenge
+
+        # (1) The real provider's auth URL carries PKCE params and the
+        #     least-privilege scope (gmail.readonly only).
+        provider = GoogleOAuthProvider(
+            client_id="pkce-client", client_secret="pkce-secret",
+            redirect_uri=self.config.redirect_uri,
+        )
+        state, verifier = "state-pkce", "".join(["v"] * 43)
+        params = parse_qs(urlparse(provider.build_auth_url(state, verifier)).query)
+        self.assertEqual(params["code_challenge"][0], _code_challenge(verifier))
+        self.assertEqual(params["code_challenge_method"][0], "S256")
+        self.assertIn("https://www.googleapis.com/auth/gmail.readonly", params["scope"][0])
+        self.assertNotIn("mail.google.com", params["scope"][0])  # never full access
+
+        # (2) End-to-end through the callback: the exact verifier stored at
+        #     auth/start is the one presented to exchange_code.
+        class _Recording(FakeOAuthProvider):
+            def __init__(self):
+                super().__init__()
+                self.seen = []
+
+            async def exchange_code(self, code, code_verifier):
+                self.seen.append((code, code_verifier))
+                return self.exchange_result
+
+        recording = _Recording()
+        service = build_gmail_service(
+            config=self.config, client=self.fake_client, oauth=recording,
+            token_store_factory=lambda db: FakeTokenStore(),
+            state_store=OAuthStateStore(),
+        )
+        state2, verifier2 = service.state_store.create()
+        target = asyncio.run(service.complete_callback(state2, "code-pkce", None))
+        self.assertEqual(target, "http://localhost:5173/investigation?connect=success")
+        self.assertEqual(recording.seen, [("code-pkce", verifier2)])
 
     def test_oauth_callback_success_redirects_and_persists_encrypted_tokens(self):
         fake_oauth_calls_before = self.fake_oauth.exchange_calls

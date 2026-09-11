@@ -1,15 +1,12 @@
 # Gmail Acquisition Architecture Design
 
-**Status:** Architecture audit only — no application code, models, OAuth flow,
-Google credentials, or secrets were created. This document is the design
-baseline for Phase 3 (first direct mailbox acquisition source).
+**Status:** **IMPLEMENTED (Phase 3, completed checkpoint).** The backend, OAuth/PKCE flow, encrypted token store, `GmailSource` adapter, picker/analyze endpoints, and the `tracemail-app` frontend connect → pick → analyze flow are implemented and exercised by the test suite (`backend/tests/test_gmail_acquisition.py`, 24 tests, green; `python -m unittest discover -v` from `backend/` = 30/30). Live end-to-end verification against a configured Google OAuth app is documented as [NEEDS TESTING] (§14 below) because it requires real credentials.
 
-**Scope:** TraceMail connects a user's Gmail via OAuth, lets the analyst pick
-one suspicious message, retrieves the **original raw RFC-822 representation**
-from the provider, preserves it byte-for-byte as evidence, and feeds the
-**existing** forensic pipeline. No mailbox contents other than the selected
-message are ingested. Gmail message IDs carry provider provenance only; they
-never prove sender authenticity.
+The architecture described below is the implemented design. The only out-of-date statement is the header note below (kept for context): the design baseline has been built.
+
+**Original header (design-time note):** Architecture audit only — no application code, models, OAuth flow, Google credentials, or secrets were created. This document is the design baseline for Phase 3 (first direct mailbox acquisition source).
+
+**Scope:** TraceMail connects a user's Gmail via OAuth, lets the analyst pick one suspicious message, retrieves the **original raw RFC-822 representation** from the provider, preserves it byte-for-byte as evidence, and feeds the **existing** forensic pipeline. No mailbox contents other than the selected message are ingested. Gmail message IDs carry provider provenance only; they never prove sender authenticity.
 
 ---
 

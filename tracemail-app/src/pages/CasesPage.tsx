@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import type { Case } from '../types';
 import { listCases, uploadEmail } from '../api/cases';
 import { useApiResource } from '../api/useApiResource';
+import GmailPane from '../components/GmailPane';
 
 function CasesPage() {
   const navigate = useNavigate();
   const [showUpload, setShowUpload] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [gmailMode, setGmailMode] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const { data: cases, loading, error } = useApiResource(listCases, 'cases');
@@ -60,7 +62,7 @@ function CasesPage() {
         </div>
         <div className="px-space-md">
           <button
-            onClick={() => setShowUpload(true)}
+            onClick={() => { setGmailMode(false); setShowUpload(true); }}
             className="flex items-center gap-space-sm w-full px-space-sm py-space-xs rounded-xl bg-primary-container text-on-primary hover:bg-primary transition-colors"
           >
             <span className="material-symbols-outlined text-[20px]">add_circle</span>
@@ -77,7 +79,7 @@ function CasesPage() {
               <p className="font-body-sm text-body-sm text-on-surface-variant">Active forensic email investigations and triage queue</p>
             </div>
             <button
-              onClick={() => setShowUpload(true)}
+              onClick={() => { setGmailMode(false); setShowUpload(true); }}
               className="flex items-center gap-space-2xs px-space-md py-space-xs rounded-xl bg-primary text-on-primary hover:bg-primary-container shadow-sm font-title-sm text-body-sm transition-colors"
             >
               <span className="material-symbols-outlined text-[18px]">upload</span>
@@ -107,17 +109,27 @@ function CasesPage() {
 
                 {!selectedFile ? (<>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
-                    <button disabled className="p-3 rounded-xl bg-surface-container-low text-on-surface-variant text-left">Connect Gmail<br/><small>Coming soon</small></button>
+                    <button
+                      onClick={() => setGmailMode((v) => !v)}
+                      className={`p-3 rounded-xl text-left transition-colors ${gmailMode ? 'bg-primary-container text-on-primary' : 'bg-surface-container-low text-on-surface hover:bg-surface-container'}`}
+                    >
+                      <span className="flex items-center gap-2"><span className="material-symbols-outlined text-[18px]">mail</span>Gmail</span>
+                      <small className="block text-on-surface-variant">{gmailMode ? 'Browsing messages' : 'Acquire from your inbox'}</small>
+                    </button>
                     <button disabled className="p-3 rounded-xl bg-surface-container-low text-on-surface-variant text-left">Microsoft 365<br/><small>Coming soon</small></button>
                     <button disabled className="p-3 rounded-xl bg-surface-container-low text-on-surface-variant text-left">Paste headers<br/><small>Coming soon</small></button>
                   </div>
+                  {gmailMode ? (
+                    <GmailPane onAnalyzed={(caseId) => { setShowUpload(false); setGmailMode(false); navigate(`/case/${caseId}/analyzing`); }} />
+                  ) : (
                   <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-outline-variant rounded-xl cursor-pointer hover:border-primary hover:bg-primary/5 transition-all">
                     <span className="material-symbols-outlined text-[40px] text-outline mb-2">cloud_upload</span>
                     <span className="font-body-md text-body-md text-on-surface-variant">Drop .eml file here or click to browse</span>
                     <span className="font-body-sm text-body-sm text-outline mt-1">RFC-822 email format only</span>
                     <input type="file" className="hidden" accept=".eml" onChange={handleFileSelect} />
-                  </label></>
-                ) : (
+                  </label>
+                  )}
+                </>) : (
                   <div className="flex flex-col gap-space-md">
                     <div className="bg-surface-container-low rounded-xl p-space-md flex items-center gap-space-md">
                       <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
